@@ -7,7 +7,7 @@ var http = require('http');
 var https = require('https');
 var fs = require('fs');
 var app = express();
-var httpsRedirect = require('express-https-redirect');
+//var httpsRedirect = require('express-https-redirect');
 var sslOptions = {
 	key: fs.readFileSync('./certs/key.pem'),
 	cert: fs.readFileSync('./certs/cert.pem'),
@@ -61,9 +61,7 @@ app.use(function (req, res, next) {
 	})
 });
 
-app.use('/', httpsRedirect(true));
-
-//UserName=ls12943&LocaleId=en_US&Relay=&Submit=Sign+In
+//app.use('/', httpsRedirect(true));
 
 app.use(function(req, res, next) {
 	if(req.connection.user.indexOf('\\') >= 0) {
@@ -73,7 +71,7 @@ app.use(function(req, res, next) {
 	}
 	request.post({
 		followAllRedirects: false,
-		url:'http://ochsaba1:8080/SabaTokenBasedSSO/TokenBasedSSOServlet',
+		url:'http://localhost:8080/SabaTokenBasedSSO/TokenBasedSSOServlet',
 		form: {
 			UserName: user,
 			LocaleId:'en_US',
@@ -105,7 +103,7 @@ app.use(function(req, res, next) {
   
 })
 // Start server
-var port = process.env.PORT || 443
-server.listen(port, function () {
-	console.log('Express server listening on port %d in %s mode', port, app.get('env'))
+var httpsport = process.env.PORT || 443
+server.listen(httpsport, function () {
+	console.log('Express server listening on port %d in %s mode', httpsport, app.get('env'))
 })
