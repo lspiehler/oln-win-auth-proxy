@@ -54,7 +54,7 @@ var server = require('https').createServer(sslOptions, app)
 app.use(function (req, res, next) {
 	var nodeSSPI = require('node-sspi')
 	var nodeSSPIObj = new nodeSSPI({
-		retrieveGroups: true
+		retrieveGroups: false
 	})
 	nodeSSPIObj.authenticate(req, res, function(err){
 		res.finished || next()
@@ -64,13 +64,14 @@ app.use(function (req, res, next) {
 //app.use('/', httpsRedirect(true));
 
 app.use(function(req, res, next) {
+	var redirect = '';
 	if(req.connection.user.indexOf('\\') >= 0) {
 		var user = req.connection.user.split('\\')[1];
 	} else {
 		var user = req.connection.user;
 	}
 	request.post({
-		followAllRedirects: false,
+		followRedirect: false,
 		url:'http://localhost:8080/SabaTokenBasedSSO/TokenBasedSSOServlet',
 		form: {
 			UserName: user,
@@ -81,12 +82,39 @@ app.use(function(req, res, next) {
 		}, function(err,httpResponse,body){
 			if(err) {
 				console.log(err);
+				res.send('error');
 			} else {
 				console.log(user);
-				console.log(httpResponse.headers.location);
-				res.redirect(302, httpResponse.headers.location);
+				//console.log(httpResponse.headers.location);
+				//res.redirect(302, httpResponse.headers.location);
+				//res.send(httpResponse);
+				redirect = httpResponse.headers.location;
+				request({
+					followRedirect: false,
+					url: httpResponse.headers.location
+				}, function(err,httpResponse,body) {
+					if(err) {
+						console.log(err);
+						res.send('error');
+					} else {
+						if(httpResponse.statusCode==302) {
+							res.redirect(302, redirect);
+						} else {
+							//console.log(httpResponse);
+							//res.send(httpResponse);
+							console.log('Saba rejected user, prompting for credentials');
+							res.status(401);
+							res.set('WWW-Authenticate', 'Basic realm="Enter Domain Credentials"');
+							res.send(user + ' authenticated, but denied by saba')
+						}
+					}
+				});
 			}
 	});
+	/*console.log(user);
+	res.status(401);
+	res.set('WWW-Authenticate', 'Basic realm="User Visible Realm"');
+	res.send(user)*/
   /*var out =
     'Hello ' +
     req.connection.user +
